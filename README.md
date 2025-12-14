@@ -22,15 +22,27 @@ project1/
 │       ├── travel_plan.py
 │       └── location.py
 ├── alembic/              # Міграції БД
-├── tests/                # Тести API (Hurl файли)
+├── tests/                # Тести API
 │   ├── crud.hurl
 │   ├── management.hurl
 │   ├── race-conditions.hurl
 │   ├── validation.hurl
-│   └── variables.properties
+│   ├── variables.properties
+│   └── performance-tests/  # k6 тести продуктивності
+│       ├── smoke-test.js
+│       ├── load-test.js
+│       ├── stress-test.js
+│       ├── spike-test.js
+│       ├── endurance-test.js
+│       ├── config/
+│       └── utils/
 ├── main.py               # Точка входу
 ├── recreate_tables.py    # Скрипт для перестворення таблиць
 ├── requirements.txt      # Залежності
+├── Dockerfile            # Docker образ для додатку
+├── docker-compose.yml    # Docker Compose конфігурація
+├── docker-entrypoint.sh  # Скрипт ініціалізації для контейнера
+├── env.example           # Приклад конфігураційного файлу
 └── README.md            # Документація проекту
 ```
 
@@ -75,11 +87,123 @@ alembic upgrade head
 
 ## Запуск
 
+### Нативний запуск
+
 ```bash
 uvicorn main:app --reload
 ```
 
 Сервер буде доступний за адресою: `http://127.0.0.1:8000`
+
+### Запуск через Docker (рекомендовано)
+
+Проект підтримує контейнеризацію через Docker та Docker Compose.
+
+#### Вимоги
+
+- Docker Desktop (Windows/Mac) або Docker Engine (Linux)
+- Docker Compose v2.0+
+
+#### Швидкий старт
+
+1. **Створіть файл `.env`** (опціонально, можна використати значення за замовчуванням):
+   ```bash
+   cp env.example .env
+   ```
+   
+   Або створіть `.env` з наступним вмістом:
+   ```
+   DB_NAME=travel_db
+   DB_USER=travel
+   DB_PASSWORD=travel
+   DB_PORT=5432
+   APP_PORT=8000
+   ```
+
+2. **Зберіть образи та запустіть контейнери**:
+   ```bash
+   docker compose up -d
+   ```
+
+3. **Перевірте статус контейнерів**:
+   ```bash
+   docker compose ps
+   ```
+
+4. **Сервер буде доступний за адресою**: `http://127.0.0.1:8000`
+
+#### Корисні команди Docker
+
+```bash
+# Перегляд логів
+docker compose logs -f app          # Логи додатку
+docker compose logs -f postgres     # Логи бази даних
+
+# Зупинка контейнерів
+docker compose stop
+
+# Запуск контейнерів
+docker compose start
+
+# Перезапуск контейнерів
+docker compose restart
+
+# Зупинка та видалення контейнерів
+docker compose down
+
+# Зупинка з видаленням volumes (видалить дані БД!)
+docker compose down -v
+
+# Перебудова образів
+docker compose build
+
+# Виконання команд в контейнері
+docker compose exec app python -m app.db_init
+docker compose exec postgres psql -U travel -d travel_db
+
+# Перегляд використання ресурсів
+docker stats
+```
+
+#### Структура Docker
+
+- **Dockerfile**: Multi-stage build для оптимізації розміру образу
+- **docker-compose.yml**: Оркестрація сервісів (PostgreSQL + FastAPI)
+- **docker-entrypoint.sh**: Скрипт ініціалізації бази даних
+
+#### Сервіси
+
+- **postgres**: PostgreSQL 16-alpine база даних
+  - Порт: 5432 (налаштовується через `DB_PORT`)
+  - Дані зберігаються в volume `postgres_data`
+
+- **app**: Travel Plans API додаток
+  - Порт: 8000 (налаштовується через `APP_PORT`)
+  - Автоматично чекає готовності PostgreSQL перед запуском
+  - Автоматично ініціалізує базу даних при першому запуску
+
+#### Health Checks
+
+Обидва сервіси мають health checks:
+- PostgreSQL: перевірка через `pg_isready`
+- FastAPI: перевірка через `/health` endpoint
+
+#### Тестування продуктивності з Docker
+
+Після запуску контейнерів, тести k6 можна запускати з хоста:
+
+```bash
+# Smoke test
+k6 run tests/performance-tests/smoke-test.js
+
+# Load test
+k6 run tests/performance-tests/load-test.js
+
+# Всі тести
+.\run-all-tests.ps1
+```
+
+API доступне на `localhost:8000`, тому тести працюють без додаткових налаштувань.
 
 ## Тестування
 
@@ -121,6 +245,63 @@ hurl --test tests/ --variables-file tests/variables.properties
 - `management.hurl` - тести управління локаціями
 - `race-conditions.hurl` - тести на race conditions та optimistic locking
 - `validation.hurl` - тести валідації даних (31 тестовий сценарій)
+
+## Тестування продуктивності (k6)
+
+Проект також включає тести продуктивності з використанням [k6](https://k6.io/).
+
+### Встановлення k6
+
+**Windows:**
+```bash
+choco install k6
+```
+Або завантажте з [офіційного сайту](https://k6.io/docs/getting-started/installation/)
+
+**Linux/Mac:**
+```bash
+# Ubuntu/Debian
+sudo gpg -k
+sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+sudo apt-get update
+sudo apt-get install k6
+```
+
+### Запуск тестів продуктивності
+
+1. Переконайтеся, що сервер запущений (нативний або Docker)
+
+2. Запустіть тести:
+```bash
+# Smoke test (базовий тест)
+k6 run tests/performance-tests/smoke-test.js
+
+# Load test (навантаження)
+k6 run tests/performance-tests/load-test.js
+
+# Stress test (стресове навантаження)
+k6 run tests/performance-tests/stress-test.js
+
+# Spike test (різкі зростання навантаження)
+k6 run tests/performance-tests/spike-test.js
+
+# Endurance test (тривале навантаження)
+k6 run tests/performance-tests/endurance-test.js
+
+# Всі тести (Windows PowerShell)
+.\run-all-tests.ps1
+```
+
+3. Результати зберігаються в директорії `results/`
+
+### Доступні тести
+
+- **smoke-test.js**: Базовий тест для перевірки роботи API
+- **load-test.js**: Тест навантаження (10-20 VUs)
+- **stress-test.js**: Стрісове тестування (до 30 VUs)
+- **spike-test.js**: Тест різких зростань навантаження (до 70 VUs)
+- **endurance-test.js**: Тест тривалої роботи (10 VUs протягом 1 години)
 
 ## Документація API
 
