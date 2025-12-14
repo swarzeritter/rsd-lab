@@ -1,0 +1,113 @@
+name: travel_planner
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: travel_planner_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-travel_db}
+      POSTGRES_USER: ${DB_USER:-travel}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-travel}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    networks:
+      - travel_planner_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-travel} -d ${DB_NAME:-travel_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+
+  # Travel Plans API
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: travel_planner_api
+    restart: unless-stopped
+    user: "1000:1000"
+    environment:
+      # Database configuration
+      DATABASE_URL: postgresql://${DB_USER:-travel}:${DB_PASSWORD:-travel}@postgres:5432/${DB_NAME:-travel_db}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-travel}
+      DB_PASSWORD: ${DB_PASSWORD:-travel}
+      DB_NAME: ${DB_NAME:-travel_db}
+      
+      # Application configuration
+      APP_ENV: ${APP_ENV:-production}
+      PORT: 8000
+      
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - travel_planner_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - app_logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/tmp
+
+volumes:
+  postgres_data:
+    driver: local
+  app_logs:
+    driver: local
+
+networks:
+  travel_planner_network:
+    driver: bridge
+
+
