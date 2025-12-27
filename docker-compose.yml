@@ -31,7 +31,7 @@ services:
       - ./db/replications/publisher:/docker-entrypoint-replications:ro
       - ./db/replications/common/500_orchestrate.sh:/docker-entrypoint-initdb.d/500_orchestrate.sh:ro
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     networks:
       - travel_planner_network
     healthcheck:
@@ -59,7 +59,7 @@ services:
       - /tmp
       - /var/run/postgresql
 
-  # PostgreSQL Replica (Subscriber/Slave)
+  # PostgreSQL Replica 1 (Subscriber/Slave)
   postgres_sub:
     image: postgres:16-alpine
     container_name: travel_planner_replica
@@ -75,7 +75,54 @@ services:
       - ./db/replications/subscriber:/docker-entrypoint-replications:ro
       - ./db/replications/common/500_orchestrate.sh:/docker-entrypoint-initdb.d/500_orchestrate.sh:ro
     ports:
-      - "55432:5432"
+      - "127.0.0.1:55432:5432"
+    networks:
+      - travel_planner_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-travel} -d ${DB_NAME:-travel_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+
+  # PostgreSQL Replica 2 (Subscriber/Slave)
+  postgres_sub2:
+    image: postgres:16-alpine
+    container_name: travel_planner_replica2
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-travel_db}
+      POSTGRES_USER: ${DB_USER:-travel}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-travel}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_replica2_data:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-migrations:ro
+      - ./db/replications/subscriber2:/docker-entrypoint-replications:ro
+      - ./db/replications/common/500_orchestrate.sh:/docker-entrypoint-initdb.d/500_orchestrate.sh:ro
+    ports:
+      - "127.0.0.1:55433:5432"
     networks:
       - travel_planner_network
     depends_on:
@@ -168,6 +215,8 @@ volumes:
   postgres_data:
     driver: local
   postgres_replica_data:
+    driver: local
+  postgres_replica2_data:
     driver: local
   app_logs:
     driver: local
