@@ -1,0 +1,174 @@
+name: travel_planner_sharding
+
+services:
+  # PostgreSQL Node 0 (postgres_00: db_0, db_1, db_2, db_3)
+  postgres_00:
+    image: postgres:16-alpine
+    container_name: travel_planner_postgres_00
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-travel}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-travel}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      SHARD_DATABASES: "db_0,db_1,db_2,db_3"
+    command:
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
+    volumes:
+      - postgres_00_data:/var/lib/postgresql/data
+      - ./db/sharding/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+      - ./db/migrations:/docker-entrypoint-migrations:ro
+    ports:
+      - "127.0.0.1:5400:5432"
+    networks:
+      - travel_planner_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-travel}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # PostgreSQL Node 1 (postgres_01: db_4, db_5, db_6, db_7)
+  postgres_01:
+    image: postgres:16-alpine
+    container_name: travel_planner_postgres_01
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-travel}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-travel}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      SHARD_DATABASES: "db_4,db_5,db_6,db_7"
+    command:
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
+    volumes:
+      - postgres_01_data:/var/lib/postgresql/data
+      - ./db/sharding/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+      - ./db/migrations:/docker-entrypoint-migrations:ro
+    ports:
+      - "127.0.0.1:5401:5432"
+    networks:
+      - travel_planner_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-travel}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # PostgreSQL Node 2 (postgres_02: db_8, db_9, db_a, db_b)
+  postgres_02:
+    image: postgres:16-alpine
+    container_name: travel_planner_postgres_02
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-travel}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-travel}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      SHARD_DATABASES: "db_8,db_9,db_a,db_b"
+    command:
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
+    volumes:
+      - postgres_02_data:/var/lib/postgresql/data
+      - ./db/sharding/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+      - ./db/migrations:/docker-entrypoint-migrations:ro
+    ports:
+      - "127.0.0.1:5402:5432"
+    networks:
+      - travel_planner_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-travel}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # PostgreSQL Node 3 (postgres_03: db_c, db_d, db_e, db_f)
+  postgres_03:
+    image: postgres:16-alpine
+    container_name: travel_planner_postgres_03
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-travel}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-travel}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      SHARD_DATABASES: "db_c,db_d,db_e,db_f"
+    command:
+      - "postgres"
+      - "-c"
+      - "listen_addresses=*"
+    volumes:
+      - postgres_03_data:/var/lib/postgresql/data
+      - ./db/sharding/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh:ro
+      - ./db/migrations:/docker-entrypoint-migrations:ro
+    ports:
+      - "127.0.0.1:5403:5432"
+    networks:
+      - travel_planner_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-travel}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Travel Plans API with Sharding
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: travel_planner_api_sharding
+    restart: unless-stopped
+    user: "1000:1000"
+    environment:
+      DB_HOST: postgres_00
+      DB_USER: ${DB_USER:-travel}
+      DB_PASSWORD: ${DB_PASSWORD:-travel}
+      APP_ENV: ${APP_ENV:-production}
+      PORT: 8000
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SHARDING_ENABLED: "true"
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    depends_on:
+      postgres_00:
+        condition: service_healthy
+      postgres_01:
+        condition: service_healthy
+      postgres_02:
+        condition: service_healthy
+      postgres_03:
+        condition: service_healthy
+    networks:
+      - travel_planner_network
+    volumes:
+      - ./mapping.json:/app/mapping.json:ro
+      - app_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_00_data:
+    driver: local
+  postgres_01_data:
+    driver: local
+  postgres_02_data:
+    driver: local
+  postgres_03_data:
+    driver: local
+  app_logs:
+    driver: local
+
+networks:
+  travel_planner_network:
+    driver: bridge
+

@@ -2,8 +2,10 @@
 set -e
 
 echo "Waiting for PostgreSQL to be ready..."
-until pg_isready -h postgres -U ${DB_USER:-travel} -d ${DB_NAME:-travel_db} 2>/dev/null; do
-  echo "Waiting for PostgreSQL..."
+# Використовуємо DB_HOST з оточення або postgres за замовчуванням
+DB_HOST=${DB_HOST:-postgres}
+until pg_isready -h "$DB_HOST" -U ${DB_USER:-travel} 2>/dev/null; do
+  echo "Waiting for PostgreSQL ($DB_HOST)..."
   sleep 1
 done
 

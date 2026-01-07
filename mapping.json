@@ -1,0 +1,115 @@
+{
+  "db_0": {
+    "host": "postgres_00",
+    "port": 5432,
+    "database": "db_0",
+    "user": "travel",
+    "password": "travel"
+  },
+  "db_1": {
+    "host": "postgres_00",
+    "port": 5432,
+    "database": "db_1",
+    "user": "travel",
+    "password": "travel"
+  },
+  "db_2": {
+    "host": "postgres_00",
+    "port": 5432,
+    "database": "db_2",
+    "user": "travel",
+    "password": "travel"
+  },
+  "db_3": {
+    "host": "postgres_00",
+    "port": 5432,
+    "database": "db_3",
+    "user": "travel",
+    "password": "travel"
+  },
+  "db_4": {
+    "host": "postgres_01",
+    "port": 5432,
+    "database": "db_4",
+    "user": "travel",
+    "password": "travel"
+  },
+  "db_5": {
+    "host": "postgres_01",
+    "port": 5432,
+    "database": "db_5",
+    "user": "travel",
+    "password": "travel"
+  },
+  "db_6": {
+    "host": "postgres_01",
+    "port": 5432,
+    "database": "db_6",
+    "user": "travel",
+    "password": "travel"
+  },
+  "db_7": {
+    "host": "postgres_01",
+    "port": 5432,
+    "database": "db_7",
+    "user": "travel",
+    "password": "travel"
+  },
+  "db_8": {
+    "host": "postgres_02",
+    "port": 5432,
+    "database": "db_8",
+    "user": "travel",
+    "password": "travel"
+  },
+  "db_9": {
+    "host": "postgres_02",
+    "port": 5432,
+    "database": "db_9",
+    "user": "travel",
+    "password": "travel"
+  },
+  "db_a": {
+    "host": "postgres_02",
+    "port": 5432,
+    "database": "db_a",
+    "user": "travel",
+    "password": "travel"
+  },
+  "db_b": {
+    "host": "postgres_02",
+    "port": 5432,
+    "database": "db_b",
+    "user": "travel",
+    "password": "travel"
+  },
+  "db_c": {
+    "host": "postgres_03",
+    "port": 5432,
+    "database": "db_c",
+    "user": "travel",
+    "password": "travel"
+  },
+  "db_d": {
+    "host": "postgres_03",
+    "port": 5432,
+    "database": "db_d",
+    "user": "travel",
+    "password": "travel"
+  },
+  "db_e": {
+    "host": "postgres_03",
+    "port": 5432,
+    "database": "db_e",
+    "user": "travel",
+    "password": "travel"
+  },
+  "db_f": {
+    "host": "postgres_03",
+    "port": 5432,
+    "database": "db_f",
+    "user": "travel",
+    "password": "travel"
+  }
+}
+
