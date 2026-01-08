@@ -1,7 +1,6 @@
 from sqlalchemy import Column, String, Text, Date, Numeric, Boolean, Integer, DateTime, CheckConstraint
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
 import uuid
 from app.database import Base
 
@@ -21,8 +20,9 @@ class TravelPlan(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    # Зв'язок з локаціями
-    locations = relationship("Location", back_populates="travel_plan", cascade="all, delete-orphan")
+    # Зберігання локацій в JSONB (заміна окремої таблиці)
+    # Структура: list of location objects
+    locations = Column(JSONB, server_default='[]', nullable=False)
 
     # Constraints
     __table_args__ = (
