@@ -5,6 +5,7 @@ from app.routers import travel_plans, locations
 from app.config import settings
 # Імпортуємо schemas, щоб forward references вирішились
 from app.schemas import travel_plan, location
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -13,6 +14,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Налаштування Prometheus Metrics
+Instrumentator().instrument(app).expose(app)
 
 
 @app.exception_handler(RequestValidationError)

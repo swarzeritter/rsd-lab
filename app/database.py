@@ -46,11 +46,11 @@ def get_db():
     Для шардування використовуйте get_db_for_travel_plan з app.dependencies.
     """
     if not SHARDING_ENABLED:
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
     else:
         # Якщо шардування увімкнено, але викликається get_db - використовуємо перший шард
         from app.sharding import get_sharding_manager

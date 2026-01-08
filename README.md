@@ -423,3 +423,22 @@ k6 run tests/performance-tests/endurance-test.js
 
 - Запити до списків (`GET /travel-plans/`, `GET /locations/`) повертають дані тільки з першого шарду
 - Для операцій з локаціями потрібен параметр `travel_plan_id` при увімкненому шардуванні
+
+## Моніторинг (Lab 7)
+
+Проект включає систему моніторингу на базі Prometheus та Grafana.
+
+### Запуск моніторингу
+
+```bash
+docker compose -f docker-compose-monitoring.yml up -d
+```
+
+### Компоненти
+
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3000 (admin/admin)
+- **FastAPI Metrics**: http://localhost:8000/metrics
+
+Для налаштування візуалізації в Grafana необхідно додати Data Source (Prometheus) з адресою `http://prometheus:9090`.
+
